@@ -1,5 +1,8 @@
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextResponse } from "next/server";
+
+const PRESIGNED_URL_EXPIRES_IN_SECONDS = 60;
 
 function getRequiredEnv(name: string): string {
   const value = process.env[name] ?? process.env[`MM_${name}`];
@@ -58,29 +61,20 @@ export async function GET(
   });
 
   try {
-    const response = await client.send(
-      new GetObjectCommand({
-        Bucket: getRequiredEnv("S3_GAME_BUCKET"),
-        Key: objectKey,
-      }),
-    );
-
-    const body = response.Body?.transformToWebStream();
-    if (!body) {
-      return new NextResponse("Not Found", { status: 404 });
-    }
-
-    return new NextResponse(body, {
-      status: 200,
-      headers: {
-        "Content-Type": response.ContentType ?? "application/octet-stream",
-      },
+    const command = new GetObjectCommand({
+      Bucket: getRequiredEnv("S3_GAME_BUCKET"),
+      Key: objectKey,
     });
+    const presignedUrl = await getSignedUrl(client, command, {
+      expiresIn: PRESIGNED_URL_EXPIRES_IN_SECONDS,
+    });
+
+    return NextResponse.redirect(presignedUrl, 307);
   } catch (error) {
     if (isS3NotFound(error)) {
       return new NextResponse("Not Found", { status: 404 });
     }
 
-    throw error;
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
 }

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const sendMock = vi.fn();
+const getSignedUrlMock = vi.fn();
 const s3ClientMock = vi.fn();
 const getObjectCommandMock = vi.fn();
 
@@ -9,13 +9,18 @@ vi.mock("@aws-sdk/client-s3", () => ({
     constructor(config: unknown) {
       s3ClientMock(config);
     }
-    send = sendMock;
   },
   GetObjectCommand: class {
+    input: unknown;
     constructor(input: unknown) {
+      this.input = input;
       getObjectCommandMock(input);
     }
   },
+}));
+
+vi.mock("@aws-sdk/s3-request-presigner", () => ({
+  getSignedUrl: (...args: unknown[]) => getSignedUrlMock(...args),
 }));
 
 const REQUIRED_ENV = {
@@ -25,19 +30,10 @@ const REQUIRED_ENV = {
   S3_GAME_BUCKET: "private-game-bucket",
 };
 
-function streamFrom(text: string) {
-  return new ReadableStream({
-    start(controller) {
-      controller.enqueue(new TextEncoder().encode(text));
-      controller.close();
-    },
-  });
-}
-
 describe("GET /StreamingAssets/[...path]", () => {
   beforeEach(() => {
     vi.resetModules();
-    sendMock.mockReset();
+    getSignedUrlMock.mockReset();
     s3ClientMock.mockReset();
     getObjectCommandMock.mockReset();
     vi.unstubAllEnvs();
@@ -47,51 +43,50 @@ describe("GET /StreamingAssets/[...path]", () => {
     }
   });
 
-  it("streams the S3 object for a nested StreamingAssets key", async () => {
-    const body = streamFrom("catalog");
-    sendMock.mockResolvedValue({
-      Body: { transformToWebStream: () => body },
-      ContentType: "application/json",
-    });
+  it("redirects to a 60-second S3 presigned URL", async () => {
+    getSignedUrlMock.mockResolvedValue(
+      "https://private-game-bucket.s3.amazonaws.com/webgl/StreamingAssets/aa/bb.bundle?X-Amz-Expires=60",
+    );
 
     const { GET } = await import("./[...path]/route");
-    const response = await GET(new Request("http://localhost/StreamingAssets/aa/bb.json"), {
-      params: Promise.resolve({ path: ["aa", "bb.json"] }),
-    });
-
-    expect(s3ClientMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        region: "ap-northeast-1",
-        credentials: {
-          accessKeyId: "test-access-key",
-          secretAccessKey: "test-secret-key",
-        },
-      }),
+    const response = await GET(
+      new Request("http://localhost/StreamingAssets/aa/bb.bundle"),
+      { params: Promise.resolve({ path: ["aa", "bb.bundle"] }) },
     );
+
     expect(getObjectCommandMock).toHaveBeenCalledWith({
       Bucket: "private-game-bucket",
-      Key: "webgl/StreamingAssets/aa/bb.json",
+      Key: "webgl/StreamingAssets/aa/bb.bundle",
     });
-    expect(response.status).toBe(200);
-    expect(response.headers.get("Content-Type")).toBe("application/json");
-    await expect(response.text()).resolves.toBe("catalog");
+    expect(getSignedUrlMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        input: {
+          Bucket: "private-game-bucket",
+          Key: "webgl/StreamingAssets/aa/bb.bundle",
+        },
+      }),
+      { expiresIn: 60 },
+    );
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain(
+      "webgl/StreamingAssets/aa/bb.bundle",
+    );
   });
 
-  it("defaults Content-Type to application/octet-stream", async () => {
-    sendMock.mockResolvedValue({
-      Body: { transformToWebStream: () => streamFrom("bin") },
-    });
-
+  it("returns 404 for an unsafe path", async () => {
     const { GET } = await import("./[...path]/route");
-    const response = await GET(new Request("http://localhost/StreamingAssets/data.bin"), {
-      params: Promise.resolve({ path: ["data.bin"] }),
-    });
+    const response = await GET(
+      new Request("http://localhost/StreamingAssets/../secret"),
+      { params: Promise.resolve({ path: ["..", "secret"] }) },
+    );
 
-    expect(response.headers.get("Content-Type")).toBe("application/octet-stream");
+    expect(response.status).toBe(404);
+    expect(getSignedUrlMock).not.toHaveBeenCalled();
   });
 
-  it("returns 404 when S3 does not have the object", async () => {
-    sendMock.mockRejectedValue(
+  it("returns 404 when S3 signing fails as not found", async () => {
+    getSignedUrlMock.mockRejectedValue(
       Object.assign(new Error("missing"), {
         name: "NoSuchKey",
         $metadata: { httpStatusCode: 404 },
@@ -99,10 +94,23 @@ describe("GET /StreamingAssets/[...path]", () => {
     );
 
     const { GET } = await import("./[...path]/route");
-    const response = await GET(new Request("http://localhost/StreamingAssets/missing.json"), {
-      params: Promise.resolve({ path: ["missing.json"] }),
-    });
+    const response = await GET(
+      new Request("http://localhost/StreamingAssets/missing.bundle"),
+      { params: Promise.resolve({ path: ["missing.bundle"] }) },
+    );
 
     expect(response.status).toBe(404);
+  });
+
+  it("returns 500 when signing the URL fails", async () => {
+    getSignedUrlMock.mockRejectedValue(new Error("kms unavailable"));
+
+    const { GET } = await import("./[...path]/route");
+    const response = await GET(
+      new Request("http://localhost/StreamingAssets/aa/bb.bundle"),
+      { params: Promise.resolve({ path: ["aa", "bb.bundle"] }) },
+    );
+
+    expect(response.status).toBe(500);
   });
 });
