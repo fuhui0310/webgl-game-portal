@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 
 export type GameClientProps = {
   loaderUrl: string;
@@ -89,6 +89,16 @@ export function GameClient({
     setErrorMessage("Unity Loader 載入失敗");
   }, []);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("token")) {
+        url.searchParams.delete("token");
+        window.history.replaceState({}, document.title, url.toString());
+      }
+    }
+  }, []);
+
   return (
     <main className="relative min-h-full flex-1 bg-black">
       <canvas
@@ -120,7 +130,9 @@ export function GameClient({
       {status === "error" && errorMessage ? (
         <div className="absolute inset-0 flex items-center justify-center bg-zinc-950 px-6 text-center">
           <div className="max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/80 p-10 text-zinc-100">
-            <h1 className="text-2xl font-semibold tracking-tight">{errorMessage}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {errorMessage}
+            </h1>
             <p className="mt-4 text-sm leading-6 text-zinc-400">
               請重新整理頁面，或向管理員索取新的遊戲連結。
             </p>

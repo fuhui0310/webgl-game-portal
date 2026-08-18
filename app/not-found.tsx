@@ -55,7 +55,7 @@ export default function NotFound() {
         href="/"
         className="mt-8 inline-flex min-h-11 items-center justify-center rounded-none border-2 border-white px-6 py-2.5 font-mono text-sm tracking-widest text-white transition-colors hover:bg-white hover:text-black"
       >
-        回首頁找兔子
+        回首頁
       </Link>
     </main>
   );

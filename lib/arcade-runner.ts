@@ -153,7 +153,7 @@ export function tick(
   }
 
   const speed = Math.min(BASE_SPEED + state.score * 2.4, MAX_SPEED);
-  let player = { ...state.player };
+  const player: Player = { ...state.player };
   player.vy += GRAVITY * dt;
   player.y += player.vy * dt;
 

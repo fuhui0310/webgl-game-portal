@@ -23,12 +23,12 @@ export function getGameBuildObjectKeys(prefix: string): GameBuildObjectKeys {
     throw new Error("Game build prefix is required");
   }
 
-  const objectPrefix = `Build/${prefix}`;
+  const objectPrefix = `webgl/Build/${prefix}`;
   return {
     loaderKey: `${objectPrefix}.loader.js`,
-    dataKey: `${objectPrefix}.data`,
-    frameworkKey: `${objectPrefix}.framework.js`,
-    codeKey: `${objectPrefix}.wasm`,
+    dataKey: `${objectPrefix}.data.gz`,
+    frameworkKey: `${objectPrefix}.framework.js.gz`,
+    codeKey: `${objectPrefix}.wasm.gz`,
   };
 }
 
@@ -37,6 +37,22 @@ export async function generateGamePresignedUrl(
 ): Promise<string> {
   if (!objectKey) {
     throw new Error("objectKey is required");
+  }
+
+  let contentType = "application/octet-stream";
+  let contentEncoding = undefined;
+
+  if (objectKey.endsWith(".loader.js")) {
+    contentType = "application/javascript";
+  } else if (objectKey.endsWith(".framework.js.gz")) {
+    contentType = "application/javascript";
+    contentEncoding = "gzip";
+  } else if (objectKey.endsWith(".wasm.gz")) {
+    contentType = "application/wasm";
+    contentEncoding = "gzip";
+  } else if (objectKey.endsWith(".data.gz")) {
+    contentType = "application/octet-stream";
+    contentEncoding = "gzip";
   }
 
   const client = new S3Client({
@@ -50,6 +66,8 @@ export async function generateGamePresignedUrl(
   const command = new GetObjectCommand({
     Bucket: getRequiredEnv("S3_GAME_BUCKET"),
     Key: objectKey,
+    ResponseContentType: contentType,
+    ResponseContentEncoding: contentEncoding,
   });
 
   return getSignedUrl(client, command, {

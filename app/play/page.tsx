@@ -1,4 +1,5 @@
 import { GameClient } from "@/app/play/GameClient";
+import { redirect } from "next/navigation";
 import { extractPlayToken, verifyPlayToken } from "@/lib/play-auth";
 import {
   generateGamePresignedUrl,
@@ -28,7 +29,9 @@ function GameLoadError() {
   return (
     <main className="flex min-h-full flex-1 flex-col items-center justify-center bg-zinc-950 px-6 text-center text-zinc-100">
       <div className="max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/80 p-10 shadow-xl">
-        <h1 className="text-2xl font-semibold tracking-tight">遊戲暫時無法載入</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          遊戲暫時無法載入
+        </h1>
         <p className="mt-4 text-sm leading-6 text-zinc-400">
           驗證已通過，但遊戲檔案網址產生失敗。請稍後再試，或聯繫管理員。
         </p>
@@ -46,6 +49,9 @@ export default async function PlayPage({
   const playToken = extractPlayToken(token);
 
   if (!playToken || !verifyPlayToken(playToken)) {
+    if (token) {
+      redirect("/play");
+    }
     return <InvalidOrExpiredLink />;
   }
 
@@ -54,24 +60,28 @@ export default async function PlayPage({
     throw new Error("Missing required environment variable: S3_GAME_PREFIX");
   }
 
+  let preSignedUrls;
+
   try {
     const keys = getGameBuildObjectKeys(gamePrefix);
-    const [loaderUrl, dataUrl, frameworkUrl, codeUrl] = await Promise.all([
+    preSignedUrls = await Promise.all([
       generateGamePresignedUrl(keys.loaderKey),
       generateGamePresignedUrl(keys.dataKey),
       generateGamePresignedUrl(keys.frameworkKey),
       generateGamePresignedUrl(keys.codeKey),
     ]);
-
-    return (
-      <GameClient
-        loaderUrl={loaderUrl}
-        dataUrl={dataUrl}
-        frameworkUrl={frameworkUrl}
-        codeUrl={codeUrl}
-      />
-    );
   } catch {
     return <GameLoadError />;
   }
+
+  const [loaderUrl, dataUrl, frameworkUrl, codeUrl] = preSignedUrls;
+
+  return (
+    <GameClient
+      loaderUrl={loaderUrl}
+      dataUrl={dataUrl}
+      frameworkUrl={frameworkUrl}
+      codeUrl={codeUrl}
+    />
+  );
 }

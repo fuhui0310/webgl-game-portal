@@ -22,14 +22,15 @@ vi.mock("next/script", () => ({
       onLoad?.();
     }, [onError, onLoad, src]);
 
-    return <script data-testid="unity-loader-script" src={src} />;
+    return <script async data-testid="unity-loader-script" src={src} />;
   },
 }));
 
 const urls = {
   loaderUrl: "https://s3.example/Build/MyGame.loader.js?X-Amz-Signature=abc",
   dataUrl: "https://s3.example/Build/MyGame.data?X-Amz-Signature=def",
-  frameworkUrl: "https://s3.example/Build/MyGame.framework.js?X-Amz-Signature=ghi",
+  frameworkUrl:
+    "https://s3.example/Build/MyGame.framework.js?X-Amz-Signature=ghi",
   codeUrl: "https://s3.example/Build/MyGame.wasm?X-Amz-Signature=jkl",
 };
 
