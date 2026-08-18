@@ -34,10 +34,13 @@ describe("NotFound page", () => {
     expect(screen.getByText("404")).toBeTruthy();
     expect(screen.getByText("找不到頁面")).toBeTruthy();
     expect(
-      screen.getByText("這裡什麼都沒有，但首頁有一台街機可以打發時間。"),
+      screen.getByText("這裡什麼都沒有，但首頁有一隻兔子。"),
     ).toBeTruthy();
 
-    const homeLink = screen.getByRole("link", { name: /回首頁玩街機/ });
+    const heading = screen.getByText("404");
+    expect(heading.className).toMatch(/glitch/);
+
+    const homeLink = screen.getByRole("link", { name: /回首頁找兔子/ });
     expect(homeLink.getAttribute("href")).toBe("/");
   });
 });
