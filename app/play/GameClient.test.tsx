@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -36,6 +36,7 @@ const urls = {
 
 describe("GameClient", () => {
   const createUnityInstance = vi.fn();
+  const originalRequestFullscreen = HTMLElement.prototype.requestFullscreen;
 
   beforeEach(() => {
     createUnityInstance.mockReset();
@@ -46,6 +47,7 @@ describe("GameClient", () => {
   afterEach(() => {
     cleanup();
     delete window.createUnityInstance;
+    HTMLElement.prototype.requestFullscreen = originalRequestFullscreen;
   });
 
   it("renders the Unity canvas and a loading hint", async () => {
@@ -107,5 +109,26 @@ describe("GameClient", () => {
     render(<GameClient {...urls} />);
 
     expect(await screen.findByText(/遊戲啟動失敗/)).toBeTruthy();
+  });
+
+  it("requests fullscreen on the canvas wrapper from the corner button", async () => {
+    const requestFullscreen = vi.fn().mockResolvedValue(undefined);
+    HTMLElement.prototype.requestFullscreen = requestFullscreen;
+
+    const { GameClient } = await import("./GameClient");
+    render(<GameClient {...urls} />);
+
+    const canvas = document.getElementById("unity-canvas");
+    expect(canvas?.parentElement?.className).toMatch(/relative/);
+
+    const button = screen.getByRole("button", { name: /全螢幕/ });
+    expect(button.className).toMatch(/absolute/);
+    expect(button.className).toMatch(/bottom-4/);
+    expect(button.className).toMatch(/left-4/);
+
+    fireEvent.click(button);
+
+    expect(requestFullscreen).toHaveBeenCalledTimes(1);
+    expect(requestFullscreen.mock.instances[0]).toBe(canvas?.parentElement);
   });
 });

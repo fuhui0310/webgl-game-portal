@@ -19,6 +19,7 @@ export type UnityConfig = {
 
 export type UnityInstance = {
   Quit: () => Promise<void>;
+  SetFullscreen?: (fullscreen: number) => void;
 };
 
 declare global {
@@ -40,10 +41,13 @@ export function GameClient({
   codeUrl,
 }: GameClientProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const startedRef = useRef(false);
+  const unityInstanceRef = useRef<UnityInstance | null>(null);
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [progress, setProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const handleLoaderReady = useCallback(() => {
     if (startedRef.current) {
@@ -76,7 +80,8 @@ export function GameClient({
       .createUnityInstance(canvas, config, (nextProgress) => {
         setProgress(nextProgress);
       })
-      .then(() => {
+      .then((instance) => {
+        unityInstanceRef.current = instance;
         setStatus("ready");
       })
       .catch(() => {
@@ -91,6 +96,37 @@ export function GameClient({
     setErrorMessage("Unity Loader 載入失敗");
   }, []);
 
+  const handleFullscreen = useCallback(async () => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) {
+      return;
+    }
+
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+        return;
+      }
+
+      await wrapper.requestFullscreen();
+    } catch {
+      unityInstanceRef.current?.SetFullscreen?.(
+        document.fullscreenElement ? 0 : 1,
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+    };
+  }, []);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
@@ -103,7 +139,10 @@ export function GameClient({
 
   return (
     <main className="relative flex h-screen w-full flex-col bg-black">
-      <div className="relative h-full min-h-0 w-full flex-1">
+      <div
+        ref={wrapperRef}
+        className="relative h-full min-h-0 w-full flex-1"
+      >
         <canvas
           ref={canvasRef}
           id="unity-canvas"
@@ -111,6 +150,31 @@ export function GameClient({
           style={{ width: "100%", height: "100%" }}
           tabIndex={-1}
         />
+        <button
+          type="button"
+          onClick={handleFullscreen}
+          aria-label={isFullscreen ? "離開全螢幕" : "全螢幕"}
+          className="absolute bottom-4 left-4 z-10 flex items-center gap-2 rounded-lg bg-black/50 px-3 py-2 text-sm text-white transition-colors hover:bg-black/80"
+        >
+          {isFullscreen ? (
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="h-4 w-4 fill-none stroke-current stroke-2"
+            >
+              <path d="M9 3H5v4M15 3h4v4M9 21H5v-4M15 21h4v-4" />
+            </svg>
+          ) : (
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="h-4 w-4 fill-none stroke-current stroke-2"
+            >
+              <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+            </svg>
+          )}
+          {isFullscreen ? "離開全螢幕" : "全螢幕"}
+        </button>
       </div>
       <Script
         id="unity-loader"
