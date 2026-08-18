@@ -1,7 +1,7 @@
 import {
   BRICK_SPRITE,
   CACTUS_SPRITE,
-  RABBIT_SPRITE,
+  rabbitHitboxSize,
   spriteSize,
 } from "./pixel-sprites";
 
@@ -32,12 +32,13 @@ export type ArcadeState = {
   score: number;
   speed: number;
   spawnTimer: number;
+  animTimeMs: number;
   worldWidth: number;
   worldHeight: number;
   groundY: number;
 };
 
-const rabbitSize = spriteSize(RABBIT_SPRITE);
+const rabbitSize = rabbitHitboxSize();
 
 export const WORLD_WIDTH = 800;
 export const WORLD_HEIGHT = 240;
@@ -70,6 +71,7 @@ export function createArcadeState(): ArcadeState {
     score: 0,
     speed: BASE_SPEED,
     spawnTimer: 1.2,
+    animTimeMs: 0,
     worldWidth: WORLD_WIDTH,
     worldHeight: WORLD_HEIGHT,
     groundY: GROUND_Y,
@@ -184,6 +186,9 @@ export function tick(
     score: state.score + SCORE_PER_SECOND * dt,
     speed,
     spawnTimer,
+    animTimeMs: player.grounded
+      ? state.animTimeMs + dt * 1000
+      : state.animTimeMs,
   };
 }
 

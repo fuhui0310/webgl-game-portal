@@ -34,6 +34,7 @@ describe("createArcadeState", () => {
     expect(state.player.x).toBeGreaterThan(state.worldWidth * 0.25);
     expect(state.player.width).toBe(spriteSize(RABBIT_SPRITE).width);
     expect(state.player.height).toBe(spriteSize(RABBIT_SPRITE).height);
+    expect(state.animTimeMs).toBe(0);
     expect(state.player.y + state.player.height).toBe(state.groundY);
   });
 });
@@ -70,6 +71,30 @@ describe("jump", () => {
 });
 
 describe("tick", () => {
+  it("advances run animation time on the ground without changing the hitbox", () => {
+    const started = {
+      ...createArcadeState(),
+      status: "running" as const,
+      spawnTimer: 99,
+    };
+    const next = tick(started, 0.12, noSpawn);
+
+    expect(next.player.grounded).toBe(true);
+    expect(next.animTimeMs).toBeCloseTo(120);
+    expect(next.player.width).toBe(started.player.width);
+    expect(next.player.height).toBe(started.player.height);
+  });
+
+  it("keeps a stable hitbox while the rabbit is jumping", () => {
+    const airborne = jump(createArcadeState());
+    const next = tick({ ...airborne, spawnTimer: 99 }, dt, noSpawn);
+
+    expect(next.player.grounded).toBe(false);
+    expect(next.animTimeMs).toBe(0);
+    expect(next.player.width).toBe(airborne.player.width);
+    expect(next.player.height).toBe(airborne.player.height);
+  });
+
   it("applies gravity and lands the player back on the ground", () => {
     const landed = runWithoutSpawning(jump(createArcadeState()), 2);
 

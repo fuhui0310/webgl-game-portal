@@ -13,7 +13,6 @@ describe("Home arcade page", () => {
     render(<Home />);
 
     expect(screen.getByText("MEDMIND TECH")).toBeTruthy();
-    expect(screen.getByText("INSERT COIN")).toBeTruthy();
     expect(screen.getByText(/SCORE/)).toBeTruthy();
     expect(document.querySelector("canvas")).toBeInstanceOf(HTMLCanvasElement);
   });

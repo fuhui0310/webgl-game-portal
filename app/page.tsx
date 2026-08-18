@@ -13,8 +13,8 @@ import {
   BRICK_SPRITE,
   CACTUS_SPRITE,
   INK,
-  RABBIT_SPRITE,
   drawSprite,
+  selectRabbitSprite,
 } from "../lib/pixel-sprites";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -69,15 +69,23 @@ function drawScene(ctx: CanvasRenderingContext2D, state: ArcadeState) {
     );
   }
 
-  drawSprite(ctx, RABBIT_SPRITE, state.player.x, state.player.y);
+  drawSprite(
+    ctx,
+    selectRabbitSprite(state.player.grounded, state.animTimeMs),
+    state.player.x,
+    state.player.y,
+  );
 }
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef(createArcadeState());
-  const [hud, setHud] = useState({
-    status: stateRef.current.status,
-    score: stateRef.current.score,
+  const [hud, setHud] = useState<{
+    status: ArcadeState["status"];
+    score: number;
+  }>({
+    status: "ready",
+    score: 0,
   });
 
   const syncHud = useCallback((state: ArcadeState) => {
@@ -151,9 +159,6 @@ export default function Home() {
 
   return (
     <main className="flex min-h-full flex-1 flex-col items-center bg-black px-4 py-8 text-white sm:py-12">
-      <p className="font-mono text-[10px] tracking-[0.55em] text-white sm:text-xs">
-        INSERT COIN
-      </p>
       <h1 className="mt-3 text-center font-mono text-2xl font-bold tracking-[0.22em] text-white sm:text-4xl sm:tracking-[0.35em]">
         MEDMIND TECH
       </h1>
