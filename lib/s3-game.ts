@@ -56,10 +56,10 @@ export async function generateGamePresignedUrl(
   }
 
   const client = new S3Client({
-    region: getRequiredEnv("AWS_REGION"),
+    region: getRequiredEnv("MM_AWS_REGION"),
     credentials: {
-      accessKeyId: getRequiredEnv("AWS_ACCESS_KEY_ID"),
-      secretAccessKey: getRequiredEnv("AWS_SECRET_ACCESS_KEY"),
+      accessKeyId: getRequiredEnv("MM_AWS_ACCESS_KEY_ID"),
+      secretAccessKey: getRequiredEnv("MM_AWS_SECRET_ACCESS_KEY"),
     },
   });
 

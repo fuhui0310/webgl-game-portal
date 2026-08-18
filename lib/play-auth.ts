@@ -15,7 +15,11 @@ export function extractPlayToken(token: SearchParamValue): string | null {
     return token;
   }
 
-  if (Array.isArray(token) && typeof token[0] === "string" && token[0].length > 0) {
+  if (
+    Array.isArray(token) &&
+    typeof token[0] === "string" &&
+    token[0].length > 0
+  ) {
     return token[0];
   }
 
@@ -23,7 +27,7 @@ export function extractPlayToken(token: SearchParamValue): string | null {
 }
 
 export function verifyPlayToken(token: string): boolean {
-  const secret = getRequiredEnv("JWT_SECRET");
+  const secret = getRequiredEnv("MM_JWT_SECRET");
 
   try {
     verify(token, secret, { algorithms: ["HS256"] });
