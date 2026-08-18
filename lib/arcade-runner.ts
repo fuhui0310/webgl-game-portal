@@ -1,3 +1,10 @@
+import {
+  BRICK_SPRITE,
+  CACTUS_SPRITE,
+  RABBIT_SPRITE,
+  spriteSize,
+} from "./pixel-sprites";
+
 export type ArcadeStatus = "ready" | "running" | "gameover";
 
 export type Rect = {
@@ -5,6 +12,12 @@ export type Rect = {
   y: number;
   width: number;
   height: number;
+};
+
+export type ObstacleKind = "cactus" | "brick";
+
+export type Obstacle = Rect & {
+  kind: ObstacleKind;
 };
 
 export type Player = Rect & {
@@ -15,7 +28,7 @@ export type Player = Rect & {
 export type ArcadeState = {
   status: ArcadeStatus;
   player: Player;
-  obstacles: Rect[];
+  obstacles: Obstacle[];
   score: number;
   speed: number;
   spawnTimer: number;
@@ -24,12 +37,14 @@ export type ArcadeState = {
   groundY: number;
 };
 
+const rabbitSize = spriteSize(RABBIT_SPRITE);
+
 export const WORLD_WIDTH = 800;
 export const WORLD_HEIGHT = 240;
 export const GROUND_Y = 200;
-export const PLAYER_X = 72;
-export const PLAYER_WIDTH = 22;
-export const PLAYER_HEIGHT = 26;
+export const PLAYER_X = Math.round(WORLD_WIDTH / 3);
+export const PLAYER_WIDTH = rabbitSize.width;
+export const PLAYER_HEIGHT = rabbitSize.height;
 export const GRAVITY = 2200;
 export const JUMP_VELOCITY = -760;
 export const BASE_SPEED = 280;
@@ -104,16 +119,18 @@ export function jump(state: ArcadeState): ArcadeState {
   return applyJump(state);
 }
 
-function spawnObstacle(state: ArcadeState, random: () => number): Rect {
-  const tall = random() > 0.55;
-  const height = tall ? 36 : 22;
-  const width = tall ? 18 : 14;
+function spawnObstacle(state: ArcadeState, random: () => number): Obstacle {
+  const kind: ObstacleKind = random() > 0.5 ? "brick" : "cactus";
+  const { width, height } = spriteSize(
+    kind === "brick" ? BRICK_SPRITE : CACTUS_SPRITE,
+  );
 
   return {
     x: state.worldWidth,
     y: state.groundY - height,
     width,
     height,
+    kind,
   };
 }
 

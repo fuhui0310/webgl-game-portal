@@ -5,6 +5,7 @@ import {
   jump,
   tick,
 } from "./arcade-runner";
+import { RABBIT_SPRITE, spriteSize } from "./pixel-sprites";
 
 const noSpawn = () => 1;
 const dt = 1 / 60;
@@ -29,7 +30,10 @@ describe("createArcadeState", () => {
     expect(state.score).toBe(0);
     expect(state.obstacles).toEqual([]);
     expect(state.player.grounded).toBe(true);
-    expect(state.player.x).toBeLessThan(state.worldWidth / 2);
+    expect(state.player.x).toBe(Math.round(state.worldWidth / 3));
+    expect(state.player.x).toBeGreaterThan(state.worldWidth * 0.25);
+    expect(state.player.width).toBe(spriteSize(RABBIT_SPRITE).width);
+    expect(state.player.height).toBe(spriteSize(RABBIT_SPRITE).height);
     expect(state.player.y + state.player.height).toBe(state.groundY);
   });
 });
@@ -86,6 +90,7 @@ describe("tick", () => {
           y: state.groundY - 24,
           width: 16,
           height: 24,
+          kind: "cactus" as const,
         },
       ],
     };
@@ -107,6 +112,7 @@ describe("tick", () => {
           y: state.player.y,
           width: state.player.width,
           height: state.player.height,
+          kind: "brick" as const,
         },
       ],
     };

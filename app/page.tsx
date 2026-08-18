@@ -9,6 +9,13 @@ import {
   WORLD_WIDTH,
   type ArcadeState,
 } from "../lib/arcade-runner";
+import {
+  BRICK_SPRITE,
+  CACTUS_SPRITE,
+  INK,
+  RABBIT_SPRITE,
+  drawSprite,
+} from "../lib/pixel-sprites";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 function fitCanvas(canvas: HTMLCanvasElement) {
@@ -27,7 +34,7 @@ function drawScene(ctx: CanvasRenderingContext2D, state: ArcadeState) {
   const { canvas } = ctx;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.imageSmoothingEnabled = false;
-  ctx.fillStyle = "#09090b";
+  ctx.fillStyle = "#000000";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const scale = Math.min(
@@ -38,38 +45,31 @@ function drawScene(ctx: CanvasRenderingContext2D, state: ArcadeState) {
   const offsetY = (canvas.height - WORLD_HEIGHT * scale) / 2;
   ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
 
-  ctx.fillStyle = "#09090b";
+  ctx.fillStyle = "#000000";
   ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
-  ctx.fillStyle = "#d4d4d8";
-  for (let i = 0; i < 28; i += 1) {
-    const x = (i * 97) % WORLD_WIDTH;
-    const y = (i * 53) % (state.groundY - 28);
-    ctx.fillRect(x, y, 2, 2);
+  ctx.fillStyle = INK;
+  for (let i = 0; i < 18; i += 1) {
+    const x = (i * 89) % WORLD_WIDTH;
+    const y = (i * 37) % (state.groundY - 24);
+    ctx.fillRect(x, y, 1, 1);
   }
 
-  ctx.fillStyle = "#27272a";
-  ctx.fillRect(0, state.groundY, WORLD_WIDTH, WORLD_HEIGHT - state.groundY);
-  ctx.fillStyle = "#a3e635";
-  ctx.fillRect(0, state.groundY, WORLD_WIDTH, 3);
-
-  for (let x = 0; x < WORLD_WIDTH; x += 16) {
-    ctx.fillStyle = "#3f3f46";
-    ctx.fillRect(x, state.groundY + 8, 10, 3);
+  ctx.fillRect(0, state.groundY, WORLD_WIDTH, 2);
+  for (let x = 0; x < WORLD_WIDTH; x += 12) {
+    ctx.fillRect(x, state.groundY + 8, 6, 2);
   }
 
-  ctx.fillStyle = "#e879f9";
   for (const obstacle of state.obstacles) {
-    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-    ctx.fillRect(obstacle.x - 5, obstacle.y + 8, 6, 5);
-    ctx.fillRect(obstacle.x + obstacle.width - 1, obstacle.y + 14, 6, 5);
+    drawSprite(
+      ctx,
+      obstacle.kind === "brick" ? BRICK_SPRITE : CACTUS_SPRITE,
+      obstacle.x,
+      obstacle.y,
+    );
   }
 
-  const { player } = state;
-  ctx.fillStyle = "#67e8f9";
-  ctx.fillRect(player.x, player.y, player.width, player.height);
-  ctx.fillStyle = "#164e63";
-  ctx.fillRect(player.x + 14, player.y + 6, 4, 4);
+  drawSprite(ctx, RABBIT_SPRITE, state.player.x, state.player.y);
 }
 
 export default function Home() {
@@ -150,20 +150,20 @@ export default function Home() {
   }, [triggerJump]);
 
   return (
-    <main className="flex min-h-full flex-1 flex-col items-center bg-zinc-950 px-4 py-8 text-zinc-100 sm:py-12">
-      <p className="font-mono text-[10px] tracking-[0.55em] text-lime-300 sm:text-xs">
+    <main className="flex min-h-full flex-1 flex-col items-center bg-black px-4 py-8 text-white sm:py-12">
+      <p className="font-mono text-[10px] tracking-[0.55em] text-white sm:text-xs">
         INSERT COIN
       </p>
-      <h1 className="mt-3 text-center font-mono text-2xl font-bold tracking-[0.22em] text-lime-400 sm:text-4xl sm:tracking-[0.35em]">
-        NEUROGYM ARCADE
+      <h1 className="mt-3 text-center font-mono text-2xl font-bold tracking-[0.22em] text-white sm:text-4xl sm:tracking-[0.35em]">
+        MEDMIND TECH
       </h1>
-      <p className="mt-3 max-w-md text-center font-mono text-[11px] leading-5 text-zinc-500 sm:text-xs">
-        空白鍵或點擊畫面跳躍 · 避開障礙物
+      <p className="mt-3 max-w-md text-center font-mono text-[11px] leading-5 text-white sm:text-xs">
+        空白鍵或點擊畫面，讓兔子跳起來
       </p>
 
       <section className="relative mt-8 w-full max-w-4xl">
         <div
-          className="absolute right-3 top-3 z-10 font-mono text-xs tracking-widest text-lime-300 sm:right-5 sm:top-5 sm:text-sm"
+          className="absolute right-3 top-3 z-10 font-mono text-xs tracking-widest text-white sm:right-5 sm:top-5 sm:text-sm"
           aria-live="polite"
         >
           SCORE {displayScore(hud.score)}
@@ -171,32 +171,32 @@ export default function Home() {
 
         <button
           type="button"
-          aria-label="街機奔跑遊戲，按下空白鍵或點擊以跳躍"
+          aria-label="像素兔子奔跑遊戲，按下空白鍵或點擊以跳躍"
           onClick={triggerJump}
-          className="block w-full rounded-sm border-4 border-lime-500 bg-black shadow-[0_0_28px_rgba(163,230,53,0.25)]"
+          className="block w-full rounded-none border-2 border-white bg-black"
         >
           <div className="relative aspect-[16/10] min-h-[200px] w-full sm:aspect-[2/1] sm:min-h-[280px]">
             <canvas
               ref={canvasRef}
               className="absolute inset-0 h-full w-full [image-rendering:pixelated]"
             />
-            <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(to_bottom,transparent_0,transparent_2px,rgba(0,0,0,0.18)_2px,rgba(0,0,0,0.18)_4px)]" />
+            <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(to_bottom,transparent_0,transparent_2px,rgba(255,255,255,0.04)_2px,rgba(255,255,255,0.04)_4px)]" />
             {hud.status === "ready" ? (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <p className="font-mono text-[10px] tracking-[0.35em] text-lime-200 sm:text-sm">
+                <p className="font-mono text-[10px] tracking-[0.35em] text-white sm:text-sm">
                   PRESS SPACE TO START
                 </p>
               </div>
             ) : null}
             {hud.status === "gameover" ? (
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center bg-black/55 px-4 text-center">
-                <p className="font-mono text-xl tracking-[0.3em] text-fuchsia-400 sm:text-3xl">
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center bg-black/80 px-4 text-center">
+                <p className="font-mono text-xl tracking-[0.3em] text-white sm:text-3xl">
                   GAME OVER
                 </p>
-                <p className="mt-3 font-mono text-sm tracking-widest text-lime-300">
+                <p className="mt-3 font-mono text-sm tracking-widest text-white">
                   SCORE {displayScore(hud.score)}
                 </p>
-                <p className="mt-5 font-mono text-[10px] tracking-[0.28em] text-zinc-200 sm:text-xs">
+                <p className="mt-5 font-mono text-[10px] tracking-[0.28em] text-white sm:text-xs">
                   PRESS SPACE TO RESTART
                 </p>
               </div>
