@@ -7,7 +7,7 @@ import {
 } from "@/lib/s3-game";
 
 export const metadata = {
-  title: "Play",
+  title: "Play Now",
 };
 
 function InvalidOrExpiredLink() {
