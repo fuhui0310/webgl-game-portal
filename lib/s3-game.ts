@@ -64,7 +64,7 @@ export async function generateGamePresignedUrl(
   });
 
   const command = new GetObjectCommand({
-    Bucket: getRequiredEnv("S3_GAME_BUCKET"),
+    Bucket: getRequiredEnv("MM_S3_GAME_BUCKET"),
     Key: objectKey,
     ResponseContentType: contentType,
     ResponseContentEncoding: contentEncoding,

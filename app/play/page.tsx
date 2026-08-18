@@ -55,9 +55,9 @@ export default async function PlayPage({
     return <InvalidOrExpiredLink />;
   }
 
-  const gamePrefix = process.env.S3_GAME_PREFIX;
+  const gamePrefix = process.env.MM_S3_GAME_PREFIX;
   if (!gamePrefix) {
-    throw new Error("Missing required environment variable: S3_GAME_PREFIX");
+    throw new Error("Missing required environment variable: MM_S3_GAME_PREFIX");
   }
 
   let preSignedUrls;
