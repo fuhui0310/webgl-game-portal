@@ -55,11 +55,16 @@ describe("GameClient", () => {
     expect(document.getElementById("unity-canvas")).toBeInstanceOf(
       HTMLCanvasElement,
     );
+    const canvas = document.getElementById("unity-canvas");
+    expect(canvas?.className).toMatch(/w-full/);
+    expect(canvas?.className).toMatch(/h-full/);
+    expect(canvas?.style.width).toBe("100%");
+    expect(canvas?.style.height).toBe("100%");
+    expect(canvas?.parentElement?.className).toMatch(/h-full|h-screen|flex/);
     expect(screen.getByText(/載入中/)).toBeTruthy();
-    expect(screen.getByTestId("unity-loader-script")).toHaveProperty(
-      "src",
-      urls.loaderUrl,
-    );
+    expect(
+      document.querySelector('[data-testid="unity-loader-script"]'),
+    ).toHaveProperty("src", urls.loaderUrl);
   });
 
   it("starts Unity with the presigned build URLs after the loader script loads", async () => {
@@ -77,6 +82,7 @@ describe("GameClient", () => {
         dataUrl: urls.dataUrl,
         frameworkUrl: urls.frameworkUrl,
         codeUrl: urls.codeUrl,
+        matchWebGLToCanvasSize: true,
       },
       expect.any(Function),
     );

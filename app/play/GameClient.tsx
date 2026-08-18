@@ -14,6 +14,7 @@ export type UnityConfig = {
   dataUrl: string;
   frameworkUrl: string;
   codeUrl: string;
+  matchWebGLToCanvasSize: boolean;
 };
 
 export type UnityInstance = {
@@ -68,6 +69,7 @@ export function GameClient({
       dataUrl,
       frameworkUrl,
       codeUrl,
+      matchWebGLToCanvasSize: true,
     };
 
     void window
@@ -100,13 +102,16 @@ export function GameClient({
   }, []);
 
   return (
-    <main className="relative min-h-full flex-1 bg-black">
-      <canvas
-        ref={canvasRef}
-        id="unity-canvas"
-        className="block h-full min-h-svh w-full outline-none"
-        tabIndex={-1}
-      />
+    <main className="relative flex h-screen w-full flex-col bg-black">
+      <div className="relative h-full min-h-0 w-full flex-1">
+        <canvas
+          ref={canvasRef}
+          id="unity-canvas"
+          className="block h-full w-full object-contain outline-none"
+          style={{ width: "100%", height: "100%" }}
+          tabIndex={-1}
+        />
+      </div>
       <Script
         id="unity-loader"
         src={loaderUrl}
