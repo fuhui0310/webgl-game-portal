@@ -85,9 +85,16 @@ describe("GameClient", () => {
         frameworkUrl: urls.frameworkUrl,
         codeUrl: urls.codeUrl,
         matchWebGLToCanvasSize: true,
+        streamingAssetsUrl: "/StreamingAssets",
+        cacheControl: expect.any(Function),
       },
       expect.any(Function),
     );
+    const config = createUnityInstance.mock.calls[0][1] as {
+      cacheControl: (url: string) => string;
+    };
+    expect(config.cacheControl(urls.dataUrl)).toBe("immutable");
+    expect(config.cacheControl("/StreamingAssets/aa.bundle")).toBe("immutable");
   });
 
   it("shows an error when the Unity loader script fails", async () => {
@@ -130,5 +137,20 @@ describe("GameClient", () => {
 
     expect(requestFullscreen).toHaveBeenCalledTimes(1);
     expect(requestFullscreen.mock.instances[0]).toBe(canvas?.parentElement);
+  });
+
+  it("registers a service worker to cache Unity assets", async () => {
+    const register = vi.fn().mockResolvedValue({});
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: { register },
+    });
+
+    const { GameClient } = await import("./GameClient");
+    render(<GameClient {...urls} />);
+
+    await waitFor(() => {
+      expect(register).toHaveBeenCalledWith("/unity-cache-sw.js");
+    });
   });
 });

@@ -15,6 +15,8 @@ export type UnityConfig = {
   frameworkUrl: string;
   codeUrl: string;
   matchWebGLToCanvasSize: boolean;
+  streamingAssetsUrl: string;
+  cacheControl: (url: string) => string;
 };
 
 export type UnityInstance = {
@@ -33,6 +35,19 @@ declare global {
 }
 
 type LoadStatus = "loading" | "ready" | "error";
+
+function unityCacheControl(url: string): string {
+  if (
+    url.includes("/StreamingAssets/") ||
+    /\.(data|wasm|bundle|unityweb|loader\.js|framework\.js)(\.gz)?(\?|$)/i.test(
+      url,
+    )
+  ) {
+    return "immutable";
+  }
+
+  return "must-revalidate";
+}
 
 export function GameClient({
   loaderUrl,
@@ -74,6 +89,8 @@ export function GameClient({
       frameworkUrl,
       codeUrl,
       matchWebGLToCanvasSize: true,
+      streamingAssetsUrl: "/StreamingAssets",
+      cacheControl: unityCacheControl,
     };
 
     void window
@@ -113,6 +130,12 @@ export function GameClient({
       unityInstanceRef.current?.SetFullscreen?.(
         document.fullscreenElement ? 0 : 1,
       );
+    }
+  }, []);
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      void navigator.serviceWorker.register("/unity-cache-sw.js");
     }
   }, []);
 

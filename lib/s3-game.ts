@@ -1,7 +1,21 @@
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-export const PRESIGNED_URL_EXPIRES_IN_SECONDS = 900;
+export const PRESIGNED_URL_EXPIRES_IN_SECONDS = 7 * 60 * 60;
+export const PRESIGNED_SIGNING_BUCKET_MS = 6 * 60 * 60 * 1000;
+export const GAME_ASSET_CACHE_CONTROL = "public, max-age=31536000, immutable";
+
+export function getPresignedSigningOptions(now = Date.now()): {
+  expiresIn: number;
+  signingDate: Date;
+} {
+  return {
+    expiresIn: PRESIGNED_URL_EXPIRES_IN_SECONDS,
+    signingDate: new Date(
+      Math.floor(now / PRESIGNED_SIGNING_BUCKET_MS) * PRESIGNED_SIGNING_BUCKET_MS,
+    ),
+  };
+}
 
 export type GameBuildObjectKeys = {
   loaderKey: string;
@@ -34,6 +48,7 @@ export function getGameBuildObjectKeys(prefix: string): GameBuildObjectKeys {
 
 export async function generateGamePresignedUrl(
   objectKey: string,
+  now = Date.now(),
 ): Promise<string> {
   if (!objectKey) {
     throw new Error("objectKey is required");
@@ -68,9 +83,8 @@ export async function generateGamePresignedUrl(
     Key: objectKey,
     ResponseContentType: contentType,
     ResponseContentEncoding: contentEncoding,
+    ResponseCacheControl: GAME_ASSET_CACHE_CONTROL,
   });
 
-  return getSignedUrl(client, command, {
-    expiresIn: PRESIGNED_URL_EXPIRES_IN_SECONDS,
-  });
+  return getSignedUrl(client, command, getPresignedSigningOptions(now));
 }

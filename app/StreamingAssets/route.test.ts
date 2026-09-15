@@ -57,6 +57,7 @@ describe("GET /StreamingAssets/[...path]", () => {
     expect(getObjectCommandMock).toHaveBeenCalledWith({
       Bucket: "private-game-bucket",
       Key: "webgl/StreamingAssets/aa/bb.bundle",
+      ResponseCacheControl: "public, max-age=31536000, immutable",
     });
     expect(getSignedUrlMock).toHaveBeenCalledWith(
       expect.anything(),
@@ -64,9 +65,13 @@ describe("GET /StreamingAssets/[...path]", () => {
         input: {
           Bucket: "private-game-bucket",
           Key: "webgl/StreamingAssets/aa/bb.bundle",
+          ResponseCacheControl: "public, max-age=31536000, immutable",
         },
       }),
-      { expiresIn: 60 },
+      expect.objectContaining({
+        expiresIn: 7 * 60 * 60,
+        signingDate: expect.any(Date),
+      }),
     );
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toContain(

@@ -1,8 +1,10 @@
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextResponse } from "next/server";
-
-const PRESIGNED_URL_EXPIRES_IN_SECONDS = 60;
+import {
+  GAME_ASSET_CACHE_CONTROL,
+  getPresignedSigningOptions,
+} from "../../../lib/s3-game";
 
 function getRequiredEnv(name: string): string {
   const value = process.env[name] ?? process.env[`MM_${name}`];
@@ -64,10 +66,13 @@ export async function GET(
     const command = new GetObjectCommand({
       Bucket: getRequiredEnv("S3_GAME_BUCKET"),
       Key: objectKey,
+      ResponseCacheControl: GAME_ASSET_CACHE_CONTROL,
     });
-    const presignedUrl = await getSignedUrl(client, command, {
-      expiresIn: PRESIGNED_URL_EXPIRES_IN_SECONDS,
-    });
+    const presignedUrl = await getSignedUrl(
+      client,
+      command,
+      getPresignedSigningOptions(),
+    );
 
     return NextResponse.redirect(presignedUrl, 307);
   } catch (error) {
