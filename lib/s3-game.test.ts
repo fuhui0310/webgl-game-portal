@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getSignedUrlMock = vi.fn();
 const s3ClientMock = vi.fn();
+const s3SendMock = vi.fn();
 const getObjectCommandMock = vi.fn();
 
 vi.mock("@aws-sdk/client-s3", () => ({
   S3Client: class {
+    send = s3SendMock;
     constructor(config: unknown) {
       s3ClientMock(config);
     }
@@ -35,6 +37,7 @@ describe("generateGamePresignedUrl", () => {
     vi.resetModules();
     getSignedUrlMock.mockReset();
     s3ClientMock.mockReset();
+    s3SendMock.mockReset();
     getObjectCommandMock.mockReset();
     vi.unstubAllEnvs();
 
@@ -103,5 +106,65 @@ describe("getGameBuildObjectKeys", () => {
       frameworkKey: "webgl/Build/MyGame.framework.js.gz",
       codeKey: "webgl/Build/MyGame.wasm.gz",
     });
+  });
+});
+
+describe("getGameAssetVersion", () => {
+  const keys = {
+    loaderKey: "webgl/Build/MyGame.loader.js",
+    dataKey: "webgl/Build/MyGame.data.gz",
+    frameworkKey: "webgl/Build/MyGame.framework.js.gz",
+    codeKey: "webgl/Build/MyGame.wasm.gz",
+  };
+
+  function mockEtags(etags: string[]) {
+    s3SendMock.mockImplementation(async (command: { input: { Key: string } }) => {
+      const index = [
+        keys.loaderKey,
+        keys.dataKey,
+        keys.frameworkKey,
+        keys.codeKey,
+      ].indexOf(command.input.Key);
+      return { ETag: etags[index] };
+    });
+  }
+
+  it("returns a stable fingerprint from the four Build object ETags", async () => {
+    mockEtags(['"aaa"', '"bbb"', '"ccc"', '"ddd"']);
+    const { getGameAssetVersion } = await import("./s3-game");
+
+    const first = await getGameAssetVersion(keys);
+    const second = await getGameAssetVersion(keys);
+
+    expect(first).toMatch(/^[a-f0-9]{16}$/);
+    expect(first).toBe(second);
+    expect(getObjectCommandMock).toHaveBeenCalledTimes(8);
+    expect(getObjectCommandMock).toHaveBeenCalledWith({
+      Bucket: "private-game-bucket",
+      Key: keys.codeKey,
+      Range: "bytes=0-0",
+    });
+  });
+
+  it("changes when a Build object ETag changes", async () => {
+    mockEtags(['"aaa"', '"bbb"', '"ccc"', '"ddd"']);
+    const { getGameAssetVersion } = await import("./s3-game");
+    const before = await getGameAssetVersion(keys);
+
+    mockEtags(['"aaa"', '"bbb"', '"ccc"', '"eee"']);
+    const after = await getGameAssetVersion(keys);
+
+    expect(after).not.toBe(before);
+  });
+
+  it("changes when MM_S3_GAME_CACHE_VERSION is bumped", async () => {
+    mockEtags(['"aaa"', '"bbb"', '"ccc"', '"ddd"']);
+    const { getGameAssetVersion } = await import("./s3-game");
+    const before = await getGameAssetVersion(keys);
+
+    vi.stubEnv("MM_S3_GAME_CACHE_VERSION", "2026-09-16");
+    const after = await getGameAssetVersion(keys);
+
+    expect(after).not.toBe(before);
   });
 });

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { extractPlayToken, verifyPlayToken } from "@/lib/play-auth";
 import {
   generateGamePresignedUrl,
+  getGameAssetVersion,
   getGameBuildObjectKeys,
 } from "@/lib/s3-game";
 
@@ -60,28 +61,27 @@ export default async function PlayPage({
     throw new Error("Missing required environment variable: MM_S3_GAME_PREFIX");
   }
 
-  let preSignedUrls;
-
   try {
     const keys = getGameBuildObjectKeys(gamePrefix);
-    preSignedUrls = await Promise.all([
-      generateGamePresignedUrl(keys.loaderKey),
-      generateGamePresignedUrl(keys.dataKey),
-      generateGamePresignedUrl(keys.frameworkKey),
-      generateGamePresignedUrl(keys.codeKey),
-    ]);
+    const [loaderUrl, dataUrl, frameworkUrl, codeUrl, assetVersion] =
+      await Promise.all([
+        generateGamePresignedUrl(keys.loaderKey),
+        generateGamePresignedUrl(keys.dataKey),
+        generateGamePresignedUrl(keys.frameworkKey),
+        generateGamePresignedUrl(keys.codeKey),
+        getGameAssetVersion(keys),
+      ]);
+
+    return (
+      <GameClient
+        loaderUrl={loaderUrl}
+        dataUrl={dataUrl}
+        frameworkUrl={frameworkUrl}
+        codeUrl={codeUrl}
+        assetVersion={assetVersion}
+      />
+    );
   } catch {
     return <GameLoadError />;
   }
-
-  const [loaderUrl, dataUrl, frameworkUrl, codeUrl] = preSignedUrls;
-
-  return (
-    <GameClient
-      loaderUrl={loaderUrl}
-      dataUrl={dataUrl}
-      frameworkUrl={frameworkUrl}
-      codeUrl={codeUrl}
-    />
-  );
 }

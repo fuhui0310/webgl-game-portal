@@ -32,6 +32,7 @@ const urls = {
   frameworkUrl:
     "https://s3.example/Build/MyGame.framework.js?X-Amz-Signature=ghi",
   codeUrl: "https://s3.example/Build/MyGame.wasm?X-Amz-Signature=jkl",
+  assetVersion: "build-etag-v2",
 };
 
 describe("GameClient", () => {
@@ -93,8 +94,10 @@ describe("GameClient", () => {
     const config = createUnityInstance.mock.calls[0][1] as {
       cacheControl: (url: string) => string;
     };
-    expect(config.cacheControl(urls.dataUrl)).toBe("immutable");
-    expect(config.cacheControl("/StreamingAssets/aa.bundle")).toBe("immutable");
+    expect(config.cacheControl(urls.dataUrl)).toBe("must-revalidate");
+    expect(config.cacheControl("/StreamingAssets/aa.bundle")).toBe(
+      "must-revalidate",
+    );
   });
 
   it("shows an error when the Unity loader script fails", async () => {
@@ -150,7 +153,9 @@ describe("GameClient", () => {
     render(<GameClient {...urls} />);
 
     await waitFor(() => {
-      expect(register).toHaveBeenCalledWith("/unity-cache-sw.js");
+      expect(register).toHaveBeenCalledWith(
+        "/unity-cache-sw.js?v=build-etag-v2",
+      );
     });
   });
 });

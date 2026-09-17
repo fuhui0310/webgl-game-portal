@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -30,6 +31,16 @@ function getRequiredEnv(name: string): string {
     throw new Error(`Missing required environment variable: ${name}`);
   }
   return value;
+}
+
+function createGameS3Client(): S3Client {
+  return new S3Client({
+    region: getRequiredEnv("MM_AWS_REGION"),
+    credentials: {
+      accessKeyId: getRequiredEnv("MM_AWS_ACCESS_KEY_ID"),
+      secretAccessKey: getRequiredEnv("MM_AWS_SECRET_ACCESS_KEY"),
+    },
+  });
 }
 
 export function getGameBuildObjectKeys(prefix: string): GameBuildObjectKeys {
@@ -70,13 +81,7 @@ export async function generateGamePresignedUrl(
     contentEncoding = "gzip";
   }
 
-  const client = new S3Client({
-    region: getRequiredEnv("MM_AWS_REGION"),
-    credentials: {
-      accessKeyId: getRequiredEnv("MM_AWS_ACCESS_KEY_ID"),
-      secretAccessKey: getRequiredEnv("MM_AWS_SECRET_ACCESS_KEY"),
-    },
-  });
+  const client = createGameS3Client();
 
   const command = new GetObjectCommand({
     Bucket: getRequiredEnv("MM_S3_GAME_BUCKET"),
@@ -87,4 +92,38 @@ export async function generateGamePresignedUrl(
   });
 
   return getSignedUrl(client, command, getPresignedSigningOptions(now));
+}
+
+export async function getGameAssetVersion(
+  keys: GameBuildObjectKeys,
+): Promise<string> {
+  const client = createGameS3Client();
+  const bucket = getRequiredEnv("MM_S3_GAME_BUCKET");
+  const objectKeys = [
+    keys.loaderKey,
+    keys.dataKey,
+    keys.frameworkKey,
+    keys.codeKey,
+  ];
+  const etags = await Promise.all(
+    objectKeys.map(async (Key) => {
+      const result = await client.send(
+        new GetObjectCommand({
+          Bucket: bucket,
+          Key,
+          Range: "bytes=0-0",
+        }),
+      );
+      if (result.Body && "transformToByteArray" in result.Body) {
+        await result.Body.transformToByteArray();
+      }
+      return result.ETag ?? "";
+    }),
+  );
+  const extra = process.env.MM_S3_GAME_CACHE_VERSION ?? "";
+
+  return createHash("sha256")
+    .update([...etags, extra].join("|"))
+    .digest("hex")
+    .slice(0, 16);
 }

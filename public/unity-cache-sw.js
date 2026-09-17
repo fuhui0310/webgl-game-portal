@@ -1,4 +1,5 @@
-const CACHE_NAME = "unity-webgl-assets-v1";
+const version = new URL(self.location.href).searchParams.get("v") || "v1";
+const CACHE_NAME = `unity-webgl-assets-${version}`;
 
 function isUnityAsset(url) {
   if (url.pathname.startsWith("/StreamingAssets/")) {
@@ -23,7 +24,20 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    (async () => {
+      const names = await caches.keys();
+      await Promise.all(
+        names
+          .filter(
+            (name) =>
+              name.startsWith("unity-webgl-assets-") && name !== CACHE_NAME,
+          )
+          .map((name) => caches.delete(name)),
+      );
+      await self.clients.claim();
+    })(),
+  );
 });
 
 self.addEventListener("fetch", (event) => {
@@ -45,7 +59,7 @@ self.addEventListener("fetch", (event) => {
         return cached;
       }
 
-      const response = await fetch(event.request);
+      const response = await fetch(event.request, { cache: "reload" });
       if (response.ok) {
         try {
           await cache.put(key, response.clone());

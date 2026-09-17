@@ -8,6 +8,7 @@ export type GameClientProps = {
   dataUrl: string;
   frameworkUrl: string;
   codeUrl: string;
+  assetVersion: string;
 };
 
 export type UnityConfig = {
@@ -36,16 +37,7 @@ declare global {
 
 type LoadStatus = "loading" | "ready" | "error";
 
-function unityCacheControl(url: string): string {
-  if (
-    url.includes("/StreamingAssets/") ||
-    /\.(data|wasm|bundle|unityweb|loader\.js|framework\.js)(\.gz)?(\?|$)/i.test(
-      url,
-    )
-  ) {
-    return "immutable";
-  }
-
+function unityCacheControl(_url: string): string {
   return "must-revalidate";
 }
 
@@ -54,6 +46,7 @@ export function GameClient({
   dataUrl,
   frameworkUrl,
   codeUrl,
+  assetVersion,
 }: GameClientProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -135,9 +128,11 @@ export function GameClient({
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      void navigator.serviceWorker.register("/unity-cache-sw.js");
+      void navigator.serviceWorker.register(
+        `/unity-cache-sw.js?v=${encodeURIComponent(assetVersion)}`,
+      );
     }
-  }, []);
+  }, [assetVersion]);
 
   useEffect(() => {
     const onFullscreenChange = () => {
